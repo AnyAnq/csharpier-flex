@@ -27,7 +27,7 @@ internal static class AttributeLists
     public static Doc Print(
         SyntaxNode node,
         SyntaxList<AttributeListSyntax> attributeLists,
-        PrintingContext context
+        CSharpPrintingContext context
     )
     {
         if (attributeLists.Count == 0)
@@ -37,7 +37,7 @@ internal static class AttributeLists
 
         var isFieldSameLine =
             node is BaseFieldDeclarationSyntax
-            && context.Options.FormattingStyle == FormattingStyle.Resharper;
+            && context.FormattingStyle == FormattingStyle.Resharper;
 
         if (isFieldSameLine)
         {
@@ -45,12 +45,7 @@ internal static class AttributeLists
             if (totalAttrs == 3 && !HasOriginalLineBreaks(attributeLists))
             {
                 return Doc.Concat(
-                    Doc.Group(
-                        Doc.Join(
-                            Doc.Line,
-                            attributeLists.Select(o => AttributeList.Print(o, context))
-                        )
-                    ),
+                    Doc.Group(Doc.Join(Doc.Line, attributeLists, AttributeList.Print, context)),
                     Doc.HardLine
                 );
             }
@@ -61,44 +56,38 @@ internal static class AttributeLists
                 && HasOriginalLineBreaks(attributeLists)
             )
             {
-                var result = new DocListBuilder(attributeLists.Count * 2);
+                using var result = new DocListBuilder(attributeLists.Count * 2);
                 for (var i = 0; i < attributeLists.Count; i++)
                 {
                     result.Add(AttributeList.Print(attributeLists[i], context));
                     if (i < attributeLists.Count - 1)
                     {
                         result.Add(
-                            attributeLists[i]
-                                .GetTrailingTrivia()
-                                .Any(SyntaxKind.EndOfLineTrivia)
+                            attributeLists[i].GetTrailingTrivia().Any(SyntaxKind.EndOfLineTrivia)
                                 ? Doc.HardLine
                                 : (Doc)" "
                         );
                     }
                 }
                 result.Add(" ");
-                return Doc.Concat(ref result);
+                return Doc.Concat(result);
             }
         }
 
-        var docs = new DocListBuilder(2);
-        Doc separator = node
-            is TypeParameterSyntax
-                or ParameterSyntax
-                or ParenthesizedLambdaExpressionSyntax
-                or AccessorDeclarationSyntax
-            ? Doc.Line
-            : isFieldSameLine && GetTotalAttributeCount(attributeLists) <= 2
+        Doc separator =
+            node
+                is TypeParameterSyntax
+                    or ParameterSyntax
+                    or ParenthesizedLambdaExpressionSyntax
+                    or AccessorDeclarationSyntax
                 ? Doc.Line
-                : Doc.HardLine;
+            : isFieldSameLine && GetTotalAttributeCount(attributeLists) <= 2 ? Doc.Line
+            : Doc.HardLine;
 
-        docs.Add(Doc.Join(separator, attributeLists.Select(o => AttributeList.Print(o, context))));
+        var printedLists = Doc.Join(separator, attributeLists, AttributeList.Print, context);
 
-        if (node is not (ParameterSyntax or TypeParameterSyntax))
-        {
-            docs.Add(separator);
-        }
-
-        return Doc.Concat(ref docs);
+        return node is ParameterSyntax or TypeParameterSyntax
+            ? printedLists
+            : Doc.Concat(printedLists, separator);
     }
 }

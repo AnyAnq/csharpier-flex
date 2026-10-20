@@ -3,6 +3,7 @@ using CSharpier.Core.DocTypes;
 using CSharpier.Core.Utilities;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Text;
 
 namespace CSharpier.Core.CSharp.SyntaxPrinter;
 
@@ -12,30 +13,28 @@ internal static class ArgumentListLike
         SyntaxToken openParenToken,
         SeparatedSyntaxList<ArgumentSyntax> arguments,
         SyntaxToken closeParenToken,
-        PrintingContext context
+        CSharpPrintingContext context
     )
     {
         Doc? args;
         if (
             arguments is [{ Expression: SimpleLambdaExpressionSyntax simpleLambda }]
-            && !simpleLambda.GetLeadingTrivia().Any(o => o.IsComment())
+            && !simpleLambda.GetLeadingTrivia().AnyComment()
         )
         {
             var groupId = context.GroupFor("LambdaArguments");
+            var head = Doc.GroupWithId(
+                groupId,
+                Doc.Indent(
+                    Doc.SoftLine,
+                    Argument.PrintModifiers(arguments[0], context),
+                    SimpleLambdaExpression.PrintHead(simpleLambda, context)
+                )
+            );
+            var body = SimpleLambdaExpression.PrintBody(simpleLambda, context);
             args = Doc.Concat(
-                Doc.GroupWithId(
-                    groupId,
-                    Doc.Indent(
-                        Doc.SoftLine,
-                        Argument.PrintModifiers(arguments[0], context),
-                        SimpleLambdaExpression.PrintHead(simpleLambda, context)
-                    )
-                ),
-                Doc.IfBreak(
-                    Doc.Indent(Doc.Group(SimpleLambdaExpression.PrintBody(simpleLambda, context))),
-                    SimpleLambdaExpression.PrintBody(simpleLambda, context),
-                    groupId
-                ),
+                head,
+                Doc.IfBreak(Doc.Indent(Doc.Group(body)), body, groupId),
                 simpleLambda.Body
                     is BlockSyntax
                         or ObjectCreationExpressionSyntax
@@ -80,14 +79,14 @@ internal static class ArgumentListLike
             args = SeparatedSyntaxList.Print(arguments, Argument.Print, Doc.Line, context);
         }
         else if (
-            context.Options.FormattingStyle == FormattingStyle.Resharper
+            context.FormattingStyle == FormattingStyle.Resharper
             && arguments.Count >= 2
-            && arguments[arguments.Count - 1].Expression
+            && arguments[^1].Expression
                 is ParenthesizedLambdaExpressionSyntax { Block.Statements.Count: > 0 }
                     or SimpleLambdaExpressionSyntax { Body: BlockSyntax { Statements.Count: > 0 } }
         )
         {
-            var docs = new DocListBuilder(arguments.Count * 3 + 2);
+            using var docs = new DocListBuilder(arguments.Count * 3 + 2);
 
             for (var i = 0; i < arguments.Count - 1; i++)
             {
@@ -99,7 +98,7 @@ internal static class ArgumentListLike
                 }
             }
 
-            var lastArg = arguments[arguments.Count - 1];
+            var lastArg = arguments[^1];
             docs.Add(Argument.PrintModifiers(lastArg, context));
 
             if (lastArg.Expression is ParenthesizedLambdaExpressionSyntax pLambda)
@@ -113,8 +112,22 @@ internal static class ArgumentListLike
                 docs.Add(SimpleLambdaExpression.PrintBody(sLambda, context));
             }
 
-            args = Doc.Concat(ref docs);
-            docs.Dispose();
+            args = Doc.Concat(docs);
+        }
+        else if (
+            arguments.Count > 1
+            && arguments[^1].Expression is LambdaExpressionSyntax lastLambda
+            && !arguments
+                .Take(arguments.Count - 1)
+                .Any(o => o.Expression is AnonymousFunctionExpressionSyntax)
+            && !openParenToken
+                .Parent!.DescendantTrivia(
+                    TextSpan.FromBounds(openParenToken.SpanStart, lastLambda.ArrowToken.SpanStart)
+                )
+                .Any(o => o.IsComment() || o.IsDirective)
+        )
+        {
+            args = ArgumentListWithTrailingLambda.Print(arguments, lastLambda, context);
         }
         else if (arguments.Count > 0)
         {

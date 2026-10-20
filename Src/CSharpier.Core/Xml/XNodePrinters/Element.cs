@@ -1,45 +1,30 @@
 using System.Xml;
-using CSharpier.Core.CSharp.SyntaxPrinter;
 using CSharpier.Core.DocTypes;
 
 namespace CSharpier.Core.Xml.XNodePrinters;
 
 internal static class Element
 {
-    internal static Doc Print(RawNode rawNode, PrintingContext context)
+    internal static Doc Print(RawNode rawNode, XmlPrintingContext context)
     {
         if (rawNode.PreviousNode?.CSharpierIgnoreType is CSharpierIgnoreType.Ignore)
         {
             return context
                 .NormalizedXml[rawNode.StartPosition..rawNode.EndPosition]
-                .Replace("\n", context.Options.LineEnding);
+                .Replace("\n", context.LineEnding);
         }
 
-        var shouldHugContent = false;
         var attrGroupId = context.GroupFor("element-attr-group-id");
 
         Doc PrintChildrenDoc()
         {
             var childContent = ElementChildren.Print(rawNode, context);
 
-            if (shouldHugContent)
-            {
-                return Doc.IndentIfBreak(
-                    Doc.Concat(PrintLineBeforeChildren(), childContent),
-                    attrGroupId
-                );
-            }
-
             return Doc.Indent(PrintLineBeforeChildren(), childContent);
         }
 
         Doc PrintLineBeforeChildren()
         {
-            if (shouldHugContent)
-            {
-                return Doc.IfBreak(Doc.SoftLine, "", attrGroupId);
-            }
-
             if (
                 rawNode.XmlWhitespaceSensitivity is XmlWhitespaceSensitivity.Strict
                 && rawNode.Nodes.FirstOrDefault()
@@ -47,6 +32,11 @@ internal static class Element
             )
             {
                 return Doc.LiteralLine;
+            }
+
+            if (rawNode.IsWhitespacePreserved)
+            {
+                return Doc.Null;
             }
 
             if (
@@ -72,15 +62,15 @@ internal static class Element
 
         Doc PrintLineAfterChildren()
         {
-            if (shouldHugContent)
-            {
-                return Doc.IfBreak(Doc.SoftLine, "", attrGroupId);
-            }
-
             if (
                 rawNode.Nodes.LastOrDefault() is { } node
                 && Tag.PrintParentClosingTagStartWithContent(node, context)
             )
+            {
+                return Doc.Null;
+            }
+
+            if (rawNode.IsWhitespacePreserved)
             {
                 return Doc.Null;
             }
@@ -96,8 +86,8 @@ internal static class Element
 
             if (
                 rawNode.XmlWhitespaceSensitivity is XmlWhitespaceSensitivity.Strict
-                && rawNode.Nodes is [{ NodeType: XmlNodeType.Text }]
-                && rawNode.Nodes[0].Value.TrimEnd(' ')[^1] is '\r' or '\n'
+                && rawNode.Nodes is [.., { NodeType: XmlNodeType.Text } lastTextNode]
+                && lastTextNode.Value.TrimEnd(' ')[^1] is '\r' or '\n'
             )
             {
                 return Doc.Null;

@@ -6,7 +6,7 @@ namespace CSharpier.Core.CSharp.SyntaxPrinter.SyntaxNodePrinters;
 
 internal static class SwitchExpression
 {
-    public static Doc Print(SwitchExpressionSyntax node, PrintingContext context)
+    public static Doc Print(SwitchExpressionSyntax node, CSharpPrintingContext context)
     {
         var sections = Doc.Group(
             Doc.Indent(
@@ -37,14 +37,12 @@ internal static class SwitchExpression
 
     private static Doc PrintArm(
         SwitchExpressionArmSyntax switchExpressionArm,
-        PrintingContext context
+        CSharpPrintingContext context
     )
     {
-        var arrowHasComment = switchExpressionArm.EqualsGreaterThanToken.LeadingTrivia.Any(o =>
-            o.IsComment()
-        );
+        var arrowHasComment = switchExpressionArm.EqualsGreaterThanToken.LeadingTrivia.AnyComment();
 
-        var groupId2 = arrowHasComment ? string.Empty : Guid.NewGuid().ToString();
+        var groupId2 = arrowHasComment ? string.Empty : Doc.NextGroupId();
         var innerContents = arrowHasComment
             ? Doc.Indent(
                 Doc.Concat(
@@ -60,14 +58,10 @@ internal static class SwitchExpression
                 Doc.IndentIfBreak(Node.Print(switchExpressionArm.Expression, context), groupId2)
             );
 
-        var groupId1 = Guid.NewGuid().ToString();
+        var groupId1 = Doc.NextGroupId();
 
         return Doc.Concat(
             ExtraNewLines.Print(switchExpressionArm),
-            Token.PrintLeadingTrivia(
-                switchExpressionArm.Pattern.GetLeadingTrivia(),
-                context.WithSkipNextLeadingTrivia()
-            ),
             Doc.Group(
                 Doc.GroupWithId(
                     groupId1,

@@ -10,7 +10,7 @@
 
 | 依赖 | 版本 |
 |---|---|
-| .NET SDK | 8.0 / 9.0 / 10.0（任一即可） |
+| 安装工具所需 .NET SDK | 10.0 / 11.0（任一即可） |
 | 操作系统 | Windows / macOS / Linux |
 
 ---
@@ -26,6 +26,8 @@ dotnet tool install CSharpier-Flex -g
 安装后即可在任意目录使用 `csharpier-flex` 命令。
 
 ### 方式二：从源码构建
+
+源码构建需要安装 [`global.json`](global.json) 指定的 .NET 11 预览版 SDK。
 
 ```bash
 git clone https://github.com/AnyAnq/csharpier-flex.git
@@ -96,9 +98,10 @@ dotnet tool uninstall CSharpier-Flex -g
 | 配置项 | 默认值 | 说明 |
 |---|---|---|
 | `printWidth` | `100` | 行宽限制 |
-| `indentSize` | `4` | 缩进空格数 |
+| `indentSize` | C# 为 `4`，XML 为 `2` | 缩进空格数 |
 | `useTabs` | `false` | 是否使用 Tab 缩进 |
 | `endOfLine` | `"auto"` | 换行符类型（`auto` / `lf` / `crlf`） |
+| `xmlWhitespaceSensitivity` | `"strict"`（XAML / AXAML 为 `"ignore"`） | XML 空白处理方式，详见[配置文档](docs/Configuration.md#xml-whitespace-sensitivity) |
 
 ---
 

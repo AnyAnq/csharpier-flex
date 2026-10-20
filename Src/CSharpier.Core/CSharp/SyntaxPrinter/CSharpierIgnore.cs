@@ -47,11 +47,15 @@ internal static partial class CSharpierIgnore
     );
 #endif
 
-    public static bool HasIgnoreComment(SyntaxNode syntaxNode) =>
-        Token.HasLeadingCommentMatching(syntaxNode, IgnoreRegex);
+    public static bool HasIgnoreComment(SyntaxNode syntaxNode)
+    {
+        return Token.HasLeadingCommentMatching(syntaxNode, IgnoreRegex);
+    }
 
-    public static bool HasIgnoreComment(SyntaxToken syntaxToken) =>
-        Token.HasLeadingCommentMatching(syntaxToken, IgnoreRegex);
+    public static bool HasIgnoreComment(SyntaxToken syntaxToken)
+    {
+        return Token.HasLeadingCommentMatching(syntaxToken, IgnoreRegex);
+    }
 
     public static bool IsNodeIgnored(SyntaxNode syntaxNode)
     {
@@ -81,29 +85,38 @@ internal static partial class CSharpierIgnore
     [SkipLocalsInit]
     public static List<Doc> PrintNodesRespectingRangeIgnore<T>(
         SyntaxList<T> list,
-        PrintingContext context
+        CSharpPrintingContext context
     )
         where T : SyntaxNode
     {
         var statements = new List<Doc>();
-        var unFormattedCode = new StringBuilder();
+        StringBuilder? unFormattedCode = null;
         var printUnformatted = false;
+        SyntaxNode? firstUnformattedNode = null;
 
         foreach (var node in list)
         {
             if (Token.HasLeadingCommentMatching(node, IgnoreEndRegex))
             {
-                statements.Add(unFormattedCode.ToString().Trim());
-                unFormattedCode.Clear();
+                var ignoredCode = unFormattedCode?.ToString().Trim() ?? string.Empty;
+                statements.Add(
+                    firstUnformattedNode is StatementSyntax statementSyntax
+                        ? Doc.Concat(ExtraNewLines.Print(statementSyntax), ignoredCode)
+                        : ignoredCode
+                );
+                unFormattedCode?.Clear();
+                firstUnformattedNode = null;
                 printUnformatted = false;
             }
             else if (Token.HasLeadingCommentMatching(node, IgnoreStartRegex))
             {
+                firstUnformattedNode ??= node;
                 printUnformatted = true;
             }
 
             if (printUnformatted)
             {
+                unFormattedCode ??= new StringBuilder();
                 unFormattedCode.Append(PrintWithoutFormatting(node, context));
             }
             else
@@ -112,22 +125,32 @@ internal static partial class CSharpierIgnore
             }
         }
 
-        if (unFormattedCode.Length > 0)
+        if (unFormattedCode is { Length: > 0 })
         {
-            statements.Add(unFormattedCode.ToString().Trim());
+            statements.Add(
+                firstUnformattedNode is StatementSyntax statementSyntax
+                    ? Doc.Concat(
+                        ExtraNewLines.Print(statementSyntax),
+                        unFormattedCode.ToString().Trim()
+                    )
+                    : unFormattedCode.ToString().Trim()
+            );
         }
 
         return statements;
     }
 
-    public static string PrintWithoutFormatting(SyntaxNode syntaxNode, PrintingContext context)
+    public static string PrintWithoutFormatting(
+        SyntaxNode syntaxNode,
+        CSharpPrintingContext context
+    )
     {
         return PrintWithoutFormatting(syntaxNode.GetText().ToString(), context);
     }
 
-    public static string PrintWithoutFormatting(string code, PrintingContext context)
+    public static string PrintWithoutFormatting(string code, CSharpPrintingContext context)
     {
         // trim trailing whitespace + replace only existing line endings
-        return WhiteSpaceLineEndingsRegex.Replace(code, context.Options.LineEnding);
+        return WhiteSpaceLineEndingsRegex.Replace(code, context.LineEnding);
     }
 }

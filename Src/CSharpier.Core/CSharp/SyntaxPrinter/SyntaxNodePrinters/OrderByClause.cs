@@ -5,14 +5,14 @@ namespace CSharpier.Core.CSharp.SyntaxPrinter.SyntaxNodePrinters;
 
 internal static class OrderByClause
 {
-    public static Doc Print(OrderByClauseSyntax node, PrintingContext context)
+    public static Doc Print(OrderByClauseSyntax node, CSharpPrintingContext context)
     {
         return Doc.Concat(
             ExtraNewLines.Print(node),
             Token.Print(node.OrderByKeyword, context),
             SeparatedSyntaxList.Print(
                 node.Orderings,
-                (orderingNode, _) =>
+                static (orderingNode, context) =>
                     Doc.Concat(
                         " ",
                         Node.Print(orderingNode.Expression, context),

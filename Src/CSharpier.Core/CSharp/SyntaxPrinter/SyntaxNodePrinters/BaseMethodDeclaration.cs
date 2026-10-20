@@ -11,7 +11,7 @@ internal static partial class BaseMethodDeclaration
 {
 #if NET8_0_OR_GREATER
 
-    [GeneratedRegex(@"\s*(\r\n?|\n)")]
+    [GeneratedRegex(@"[\t\v\f ]*(\r\n?|\n)")]
     private static partial Regex RemoveWhiteSpaceLineEndingsGenerator();
 
     private static readonly Regex RemoveWhiteSpaceLineEndingsRegex =
@@ -20,7 +20,7 @@ internal static partial class BaseMethodDeclaration
     private static readonly Regex RemoveWhiteSpaceLineEndingsRegex = new(@"\s*(\r\n?|\n)");
 #endif
 
-    public static Doc Print(CSharpSyntaxNode node, PrintingContext context)
+    public static Doc Print(CSharpSyntaxNode node, CSharpPrintingContext context)
     {
         SyntaxList<AttributeListSyntax>? attributeLists = null;
         SyntaxTokenList? modifiers = null;
@@ -113,7 +113,7 @@ internal static partial class BaseMethodDeclaration
                 docs.Add(
                     RemoveWhiteSpaceLineEndingsRegex.Replace(
                         methodWithoutAttributes,
-                        context.Options.LineEnding
+                        context.LineEnding
                     )
                 );
             }
@@ -135,29 +135,18 @@ internal static partial class BaseMethodDeclaration
 
         if (modifiers is { Count: > 0 })
         {
-            docs.Add(Token.PrintLeadingTrivia(modifiers.Value[0], context));
-            declarationGroup.Add(
-                Modifiers.PrintSorterWithoutLeadingTrivia(modifiers.Value, context)
-            );
+            declarationGroup.Add(Modifiers.PrintSorted(modifiers.Value, context));
         }
 
         if (returnType != null)
         {
-            if (modifiers is not { Count: > 0 })
-            {
-                docs.Add(Token.PrintLeadingTrivia(returnType.GetLeadingTrivia(), context));
-                context.State.SkipNextLeadingTrivia = true;
-            }
-
             declarationGroup.Add(Node.Print(returnType, context), " ");
-            context.State.SkipNextLeadingTrivia = false;
         }
 
         if (explicitInterfaceSpecifier != null)
         {
             declarationGroup.Add(
-                Node.Print(explicitInterfaceSpecifier.Name, context),
-                Token.Print(explicitInterfaceSpecifier.DotToken, context)
+                ExplicitInterfaceSpecifier.Print(explicitInterfaceSpecifier, context)
             );
         }
 

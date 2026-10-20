@@ -1,13 +1,10 @@
-import { DocumentFilter, ExtensionContext, window, workspace } from "vscode";
+import { ExtensionContext, window, workspace } from "vscode";
 import { CSharpierProcessProvider } from "./CSharpierProcessProvider";
 import { FormattingService } from "./FormattingService";
 import { Logger } from "./Logger";
 import { findDotNet } from "./DotNetProvider";
 import { options } from "./Options";
 import { NullCSharpierProcess } from "./NullCSharpierProcess";
-import { FixAllCodeActionsCommand } from "./FixAllCodeActionCommand";
-import { DiagnosticsService } from "./DiagnosticsService";
-import { FixAllCodeActionProvider } from "./FixAllCodeActionProvider";
 import { FormatDocumentProvider } from "./FormatDocumentProvider";
 
 export async function activate(context: ExtensionContext) {
@@ -19,7 +16,7 @@ export async function activate(context: ExtensionContext) {
     await initPlugin(context);
 }
 
-export let supportedLanguageIds = ["csharp", "xml"];
+export let supportedLanguageIds = ["csharp", "xml", "msbuild"];
 
 let initPlugin = async (context: ExtensionContext) => {
     let enableDebugLogs =
@@ -49,19 +46,5 @@ let initPlugin = async (context: ExtensionContext) => {
     );
     let formatDocumentProvider = new FormatDocumentProvider(logger, csharpierProcessProvider);
 
-    let diagnosticsService = new DiagnosticsService(
-        formatDocumentProvider,
-        supportedLanguageIds,
-        logger,
-    );
-    let fixAllCodeActionProvider = new FixAllCodeActionProvider(supportedLanguageIds);
-
     new FormattingService(formatDocumentProvider, supportedLanguageIds);
-    new FixAllCodeActionsCommand(context, formatDocumentProvider, logger);
-
-    context.subscriptions.push(
-        csharpierProcessProvider,
-        fixAllCodeActionProvider,
-        diagnosticsService,
-    );
 };

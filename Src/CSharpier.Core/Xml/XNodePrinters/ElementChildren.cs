@@ -1,28 +1,21 @@
 using System.Xml;
-using CSharpier.Core.CSharp.SyntaxPrinter;
 using CSharpier.Core.DocTypes;
 
 namespace CSharpier.Core.Xml.XNodePrinters;
 
 internal static class ElementChildren
 {
-    public static Doc Print(RawNode node, PrintingContext context)
+    public static Doc Print(RawNode node, XmlPrintingContext context)
     {
-        var groupIds = new List<string>();
-        foreach (var _ in node.Nodes)
-        {
-            groupIds.Add(context.GroupFor("children group"));
-        }
-
         var result = new List<Doc>();
-        var x = 0;
+        var hasMultipleChildren = node.Nodes.Count > 1;
+        string? previousGroupId = null;
         var printIgnored = false;
         foreach (var childNode in node.Nodes)
         {
             if (childNode.CSharpierIgnoreType is CSharpierIgnoreType.IgnoreEnd)
             {
                 printIgnored = false;
-                x++;
             }
 
             if (printIgnored)
@@ -30,7 +23,7 @@ internal static class ElementChildren
                 result.Add(
                     context
                         .NormalizedXml[childNode.StartPosition..childNode.EndPosition]
-                        .Replace("\n", context.Options.LineEnding)
+                        .Replace("\n", context.LineEnding)
                 );
                 continue;
             }
@@ -45,10 +38,10 @@ internal static class ElementChildren
                 continue;
             }
 
-            var prevParts = new List<Doc>();
-            var leadingParts = new List<Doc>();
-            var trailingParts = new List<Doc>();
-            var nextParts = new List<Doc>();
+            Doc? prevPart = null;
+            Doc? leadingPart = null;
+            Doc? trailingPart = null;
+            Doc? nextPart = null;
 
             var prevBetweenLine = childNode.PreviousNode is not null
                 ? PrintBetweenLine(childNode.PreviousNode, childNode)
@@ -62,22 +55,17 @@ internal static class ElementChildren
             {
                 if (prevBetweenLine is HardLine)
                 {
-                    prevParts.Add(Doc.HardLine);
+                    prevPart = Doc.HardLine;
                 }
                 else if (childNode.PreviousNode?.NodeType is XmlNodeType.Text)
                 {
-                    leadingParts.Add(prevBetweenLine);
+                    leadingPart = prevBetweenLine;
                 }
                 else
                 {
-                    if (groupIds.Count > 1)
-                    {
-                        leadingParts.Add(Doc.IfBreak(Doc.Null, Doc.SoftLine, groupIds[x - 1]));
-                    }
-                    else
-                    {
-                        leadingParts.Add(prevBetweenLine);
-                    }
+                    leadingPart = hasMultipleChildren
+                        ? Doc.IfBreak(Doc.Null, Doc.SoftLine, previousGroupId)
+                        : prevBetweenLine;
                 }
             }
 
@@ -87,28 +75,36 @@ internal static class ElementChildren
                 {
                     if (childNode.NextNode?.NodeType is XmlNodeType.Text)
                     {
-                        nextParts.Add(Doc.HardLine);
+                        nextPart = Doc.HardLine;
                     }
                 }
                 else
                 {
-                    trailingParts.Add(nextBetweenLine);
+                    trailingPart = nextBetweenLine;
                 }
             }
 
-            result.AddRange(prevParts);
+            if (prevPart is not null)
+            {
+                result.Add(prevPart);
+            }
+
+            previousGroupId = context.GroupFor("children group");
             result.Add(
                 Doc.Group(
-                    Doc.Concat(leadingParts),
+                    leadingPart ?? Doc.Null,
                     Doc.GroupWithId(
-                        groupIds[x],
+                        previousGroupId,
                         Node.Print(childNode, context),
-                        Doc.Concat(trailingParts)
+                        trailingPart ?? Doc.Null
                     )
                 )
             );
-            result.AddRange(nextParts);
-            x++;
+
+            if (nextPart is not null)
+            {
+                result.Add(nextPart);
+            }
 
             if (childNode.CSharpierIgnoreType is CSharpierIgnoreType.IgnoreStart)
             {
@@ -122,7 +118,10 @@ internal static class ElementChildren
     public static Doc PrintBetweenLine(RawNode prevNode, RawNode nextNode)
     {
         return
-            (prevNode.NodeType is XmlNodeType.Whitespace && nextNode.NodeType is XmlNodeType.Text)
+            !nextNode.HasLeadingWhitespace
+            || (
+                prevNode.NodeType is XmlNodeType.Whitespace && nextNode.NodeType is XmlNodeType.Text
+            )
             || (
                 prevNode.NodeType is XmlNodeType.Text or XmlNodeType.CDATA
                 && nextNode.NodeType is XmlNodeType.Text or XmlNodeType.CDATA

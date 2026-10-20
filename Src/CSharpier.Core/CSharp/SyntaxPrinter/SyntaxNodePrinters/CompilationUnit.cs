@@ -6,13 +6,13 @@ namespace CSharpier.Core.CSharp.SyntaxPrinter.SyntaxNodePrinters;
 
 internal static class CompilationUnit
 {
-    public static Doc Print(CompilationUnitSyntax node, PrintingContext context)
+    public static Doc Print(CompilationUnitSyntax node, CSharpPrintingContext context)
     {
         var docs = new List<Doc>();
 
         NamespaceLikePrinter.Print(node, docs, context);
 
-        // this is what ends up adding multiple HardLineSkipBreakIfFirstInGroup, but it is needed for some cases
+        // this is what ends up adding multiple HardLineForTrivia, but it is needed for some cases
         // and trying to change the logic in there to not print multiple lines was taking me down a rabbit hole
         var finalTrivia = Token.PrintLeadingTriviaWithNewLines(
             node.EndOfFileToken.LeadingTrivia,
@@ -29,7 +29,7 @@ internal static class CompilationUnit
                 && previousList.Contents[^2] is HardLine
             )
             {
-                while (list.Contents[0] is HardLine { SkipBreakIfFirstInGroup: true })
+                while (list.Contents[0] is HardLine { IsForTrivia: true })
                 {
                     list.Contents.RemoveAt(0);
                 }

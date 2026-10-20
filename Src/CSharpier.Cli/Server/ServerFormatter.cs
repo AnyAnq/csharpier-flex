@@ -1,7 +1,6 @@
 using System.Globalization;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using NReco.Logging.File;
@@ -57,45 +56,50 @@ internal class ServerFormatter
         while (true)
         {
             var context = await listener.GetContextAsync();
-            _ = Task.Run(() => ProcessRequestAsync(context, service), cancellationToken);
+            _ = ProcessRequestAsync(context, service, fileLogger, cancellationToken);
         }
     }
 
     private static async Task ProcessRequestAsync(
         HttpListenerContext context,
-        CSharpierServiceImplementation service
+        CSharpierServiceImplementation service,
+        ILogger logger,
+        CancellationToken cancellationToken
     )
     {
-        var request = context.Request;
         var response = context.Response;
 
-        if (request.Url?.AbsolutePath == "/format" && request.HttpMethod == "POST")
+        try
         {
-            using var reader = new StreamReader(
-                context.Request.InputStream,
-                context.Request.ContentEncoding
-            );
-            var body = await reader.ReadToEndAsync();
+            var request = context.Request;
 
-            var formatFileDto = JsonSerializer.Deserialize<FormatFileParameter>(body);
-            if (formatFileDto is null)
+            if (request.Url?.AbsolutePath == "/format" && request.HttpMethod == "POST")
             {
-                throw new Exception("No body!");
+                var formatFileDto =
+                    await JsonSerializer.DeserializeAsync<FormatFileParameter>(
+                        request.InputStream,
+                        cancellationToken: cancellationToken
+                    ) ?? throw new Exception("No body!");
+
+                var result = await service.FormatFile(formatFileDto, cancellationToken);
+
+                var buffer = JsonSerializer.SerializeToUtf8Bytes(result);
+                response.ContentType = "application/json";
+                response.ContentLength64 = buffer.Length;
+                await response.OutputStream.WriteAsync(buffer, cancellationToken);
             }
-
-            var result = await service.FormatFile(formatFileDto, CancellationToken.None);
-
-            response.ContentType = "application/json";
-
-            var buffer = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(result));
-            response.ContentLength64 = buffer.Length;
-            await response.OutputStream.WriteAsync(buffer);
+            else
+            {
+                response.StatusCode = 405;
+            }
         }
-        else
+        catch (Exception ex)
         {
-            response.StatusCode = 405;
+            logger.LogError(ex, "Failed to handle a request");
         }
-
-        response.OutputStream.Close();
+        finally
+        {
+            response.OutputStream.Close();
+        }
     }
 }

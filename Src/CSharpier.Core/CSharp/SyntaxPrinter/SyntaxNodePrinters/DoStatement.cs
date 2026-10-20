@@ -5,7 +5,7 @@ namespace CSharpier.Core.CSharp.SyntaxPrinter.SyntaxNodePrinters;
 
 internal static class DoStatement
 {
-    public static Doc Print(DoStatementSyntax node, PrintingContext context)
+    public static Doc Print(DoStatementSyntax node, CSharpPrintingContext context)
     {
         return Doc.Concat(
             ExtraNewLines.Print(node),
@@ -17,7 +17,7 @@ internal static class DoStatement
             Node.Print(node.Statement, context),
             node.Statement is BlockSyntax ? " " : Doc.HardLine,
             Token.PrintWithSuffix(node.WhileKeyword, " ", context),
-            context.Options.FormattingStyle == FormattingStyle.Resharper
+            context.FormattingStyle == FormattingStyle.Resharper
                 ? Doc.Group(
                     Token.Print(node.OpenParenToken, context),
                     Doc.Indent(Node.Print(node.Condition, context)),

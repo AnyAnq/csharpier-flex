@@ -5,7 +5,7 @@ namespace CSharpier.Core.CSharp.SyntaxPrinter.SyntaxNodePrinters;
 
 internal static class ForStatement
 {
-    public static Doc Print(ForStatementSyntax node, PrintingContext context)
+    public static Doc Print(ForStatementSyntax node, CSharpPrintingContext context)
     {
         return Doc.Concat(
             ExtraNewLines.Print(node),
@@ -43,11 +43,9 @@ internal static class ForStatement
                 ),
                 Token.Print(node.CloseParenToken, context)
             ),
-            node.Statement switch
-            {
-                ForStatementSyntax => Doc.Group(Doc.HardLine, Node.Print(node.Statement, context)),
-                _ => OptionalBraces.Print(node.Statement, context),
-            }
+            node.Statement is ForStatementSyntax forStatementSyntax
+                ? Doc.Group(Doc.HardLine, Print(forStatementSyntax, context))
+                : OptionalBraces.Print(node.Statement, context)
         );
     }
 }

@@ -6,9 +6,9 @@ namespace CSharpier.Core.CSharp.SyntaxPrinter.SyntaxNodePrinters;
 
 internal static class LabeledStatement
 {
-    public static Doc Print(LabeledStatementSyntax node, PrintingContext context)
+    public static Doc Print(LabeledStatementSyntax node, CSharpPrintingContext context)
     {
-        var docs = new DocListBuilder(5);
+        using var docs = new DocListBuilder(5);
         docs.Add(ExtraNewLines.Print(node));
         docs.Add(AttributeLists.Print(node, node.AttributeLists, context));
         docs.Add(Token.Print(node.Identifier, context));
@@ -22,6 +22,6 @@ internal static class LabeledStatement
         {
             docs.Add(Doc.HardLine, Node.Print(node.Statement, context));
         }
-        return Doc.Concat(ref docs);
+        return Doc.Concat(docs);
     }
 }

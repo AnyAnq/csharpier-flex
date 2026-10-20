@@ -24,13 +24,24 @@ internal static class StringBuilderExtensions
 
     public static void TrimStart(this StringBuilder value, params ReadOnlySpan<char> trimChars)
     {
-        int startIndex = 0;
+        var startIndex = 0;
         while (startIndex < value.Length && trimChars.IndexOf(value[startIndex]) >= 0)
         {
             startIndex++;
         }
 
         value.Remove(0, startIndex);
+    }
+
+    public static void TrimEnd(this StringBuilder value, params ReadOnlySpan<char> trimChars)
+    {
+        var length = value.Length;
+        while (length > 0 && trimChars.IndexOf(value[length - 1]) >= 0)
+        {
+            length--;
+        }
+
+        value.Length = length;
     }
 
     public static bool EndsWithNewLineAndWhitespace(this StringBuilder stringBuilder)

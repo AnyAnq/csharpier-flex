@@ -7,7 +7,7 @@ namespace CSharpier.Core.CSharp.SyntaxPrinter.SyntaxNodePrinters;
 
 internal static class BasePropertyDeclaration
 {
-    public static Doc Print(BasePropertyDeclarationSyntax node, PrintingContext context)
+    public static Doc Print(BasePropertyDeclarationSyntax node, CSharpPrintingContext context)
     {
         EqualsValueClauseSyntax? initializer = null;
         ExplicitInterfaceSpecifierSyntax? explicitInterfaceSpecifierSyntax = null;
@@ -51,10 +51,7 @@ internal static class BasePropertyDeclaration
                 Node.Print(node.Type, context),
                 " ",
                 explicitInterfaceSpecifierSyntax != null
-                    ? Doc.Concat(
-                        Node.Print(explicitInterfaceSpecifierSyntax.Name, context),
-                        Token.Print(explicitInterfaceSpecifierSyntax.DotToken, context)
-                    )
+                    ? ExplicitInterfaceSpecifier.Print(explicitInterfaceSpecifierSyntax, context)
                     : Doc.Null,
                 identifier != null ? identifier() : Doc.Null,
                 Contents(node, expressionBody, context),
@@ -67,7 +64,7 @@ internal static class BasePropertyDeclaration
     private static Doc Contents(
         BasePropertyDeclarationSyntax node,
         ArrowExpressionClauseSyntax? expressionBody,
-        PrintingContext context
+        CSharpPrintingContext context
     )
     {
         Doc contents = string.Empty;
@@ -112,10 +109,10 @@ internal static class BasePropertyDeclaration
     private static Doc PrintAccessorDeclarationSyntax(
         AccessorDeclarationSyntax node,
         Doc separator,
-        PrintingContext context
+        CSharpPrintingContext context
     )
     {
-        var docs = new DocListBuilder(6);
+        using var docs = new DocListBuilder(6);
         if (
             node.AttributeLists.Count > 1
             || node.Body != null
@@ -148,6 +145,6 @@ internal static class BasePropertyDeclaration
 
         docs.Add(Token.Print(node.SemicolonToken, context));
 
-        return Doc.Concat(ref docs);
+        return Doc.Concat(docs);
     }
 }

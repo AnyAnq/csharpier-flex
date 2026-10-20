@@ -6,9 +6,12 @@ namespace CSharpier.Core.CSharp.SyntaxPrinter.SyntaxNodePrinters;
 
 internal static class AnonymousObjectMemberDeclarator
 {
-    public static Doc Print(AnonymousObjectMemberDeclaratorSyntax node, PrintingContext context)
+    public static Doc Print(
+        AnonymousObjectMemberDeclaratorSyntax node,
+        CSharpPrintingContext context
+    )
     {
-        var docs = new DocListBuilder(4);
+        using var docs = new DocListBuilder(4);
         if (
             node.Parent is AnonymousObjectCreationExpressionSyntax parent
             && node != parent.Initializers.First()
@@ -23,6 +26,6 @@ internal static class AnonymousObjectMemberDeclarator
             docs.Add(Token.PrintWithSuffix(node.NameEquals.EqualsToken, " ", context));
         }
         docs.Add(Node.Print(node.Expression, context));
-        return Doc.Concat(ref docs);
+        return Doc.Concat(docs);
     }
 }

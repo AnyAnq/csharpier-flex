@@ -148,17 +148,10 @@ public static class CSharpFormatter
         try
         {
             var lineEnding = PrinterOptions.GetLineEnding(syntaxTree.ToString(), printerOptions);
-            var printingContext = new PrintingContext
+            var printingContext = new CSharpPrintingContext
             {
-                NormalizedXml = string.Empty,
-                Options = new PrintingContext.PrintingContextOptions
-                {
-                    LineEnding = lineEnding,
-                    IndentSize = printerOptions.IndentSize,
-                    UseTabs = printerOptions.UseTabs,
-                    XmlWhitespaceSensitivity = XmlWhitespaceSensitivity.Strict,
-                    FormattingStyle = printerOptions.FormattingStyle,
-                },
+                LineEnding = lineEnding,
+                FormattingStyle = printerOptions.FormattingStyle,
             };
             var document = Node.Print(rootNode, printingContext);
             var formattedCode = DocPrinter.DocPrinter.Print(document, printerOptions, lineEnding);
@@ -177,17 +170,10 @@ public static class CSharpFormatter
                     return result;
                 }
 
-                var formattingContext2 = new PrintingContext
+                var formattingContext2 = new CSharpPrintingContext
                 {
-                    NormalizedXml = string.Empty,
-                    Options = new PrintingContext.PrintingContextOptions
-                    {
-                        LineEnding = lineEnding,
-                        IndentSize = printerOptions.IndentSize,
-                        UseTabs = printerOptions.UseTabs,
-                        XmlWhitespaceSensitivity = XmlWhitespaceSensitivity.Strict,
-                        FormattingStyle = printerOptions.FormattingStyle,
-                    },
+                    LineEnding = lineEnding,
+                    FormattingStyle = printerOptions.FormattingStyle,
                 };
                 document = Node.Print(
                     await syntaxTree.GetRootAsync(cancellationToken),

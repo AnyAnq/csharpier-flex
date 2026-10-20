@@ -18,7 +18,8 @@ JSON
   "useTabs": false,
   "indentSize": 4,
   "endOfLine": "auto",
-  "allowFieldAttributeOnSameLine": false
+  "xmlWhitespaceSensitivity": "strict",
+  "formattingStyle": "default"
 }
 ```
 YAML
@@ -27,7 +28,8 @@ printWidth: 100
 useTabs: false
 indentSize: 4
 endOfLine: auto
-allowFieldAttributeOnSameLine: false
+xmlWhitespaceSensitivity: strict
+formattingStyle: default
 ```
 
 #### Print Width
@@ -54,27 +56,91 @@ Valid options:
 
 Default `auto`
 
-#### Allow Field Attribute On Same Line
-When set to `true`, field attributes are allowed to stay on the same line, with tiered behavior based on attribute count. If the combined line exceeds the print width, it will also break.
+#### Formatting Style
 
-```csharp
-// true (1-2 attrs): all on same line
-//   [SerializeField] private Button _buttonQuit;
-// true (3 attrs): attributes on same line, field on new line
-//   [SerializeField] [HideInInspector] [Header("X")]
-//   private Text _label;
-// true (4+ attrs): each on its own line
-//   [SerializeField]
-//   [HideInInspector]
-//   [Header("Title")]
-//   [Tooltip("tip")]
-//   private Text _labelTitle;
-// false: always break (original behavior)
-//   [SerializeField]
-//   private Button _buttonQuit;
+CSharpier-Flex supports two formatting presets for C#:
+
+- `default` preserves the original CSharpier formatting behavior.
+- `resharper` enables the field-attribute, binary-expression, and trailing-lambda rules described in the [README](../README.md#扩展格式化规则).
+
+Use `formattingStyle: resharper` instead of the old `allowFieldAttributeOnSameLine` option.
+
+Default `default`
+
+#### Xml Whitespace Sensitivity
+
+CSharpier can deal with whitespace in xml files in two different ways, which will produce different formatting results.
+
+**Strict**
+Treats whitespace as significant and will not add/remove new lines at the beginning/end of text elements.
+
+**Ignore** -
+Treats whitespace as insignificant and will add/remove new line at the beginning/end of text elements.
+
+For example, given the following xml
+```xml
+<ElementWithAttribute Attribute="AttributeValue__________________">TextValue</ElementWithAttribute>
 ```
 
-Default `false`
+Strict formatting will break this onto multiple lines, but not add/remove whitespeace around `TextValue`
+```xml
+<ElementWithAttribute Attribute="AttributeValue__________________"
+  >TextValue</ElementWithAttribute>
+```
+
+Ignore formatting will add new lines
+```xml
+<ElementWithAttribute Attribute="AttributeValue__________________">
+  TextValue
+</ElementWithAttribute>
+```
+
+`strict` is the default value for all file extensions except for `xaml` and `axaml`.\
+Changing to `ignore` for `csproj` can cause issues because `msbuild` does treat whitespace in the following as significant.
+```xml
+  <PropertyGroup>
+    <MyProperty>
+      true
+    </MyProperty>
+  </PropertyGroup>
+  <Target Name="MyTarget" BeforeTargets="Build" Condition=" '$(MyProperty)' == 'true' ">
+    <!-- will never be used because '/ntrue/n' != 'true' -->
+  </Target>
+```
+
+CSharpier also honors the `xml:space` attribute. With `ignore` set the whitespace within a given element can still be preserved by setting `xml:space="preserve"`
+
+```xml
+<Root>
+  <Preserve xml:space="preserve">
+    TextValue
+  </Preserve>
+</Root>
+```
+
+CSharpier will never insert a new line between adjacent elements unless there is already whitespace between them. This supports xaml `WhitespaceSignificantCollectionAttribute` which considers whitespace significant.
+```xml
+<Root>
+    <TextBlock><Run>Sub</Run><Run>total</Run></TextBlock>
+    <TextBlock>
+        <Run>Sub</Run><Run>total</Run>
+    </TextBlock>
+    <TextBlock>
+        <Run>Sub</Run> <Run>total</Run>
+    </TextBlock>
+</Root>
+<!-- will be reformatted to -->
+<Root>
+<TextBlock><Run>Sub</Run><Run>total</Run></TextBlock>
+<TextBlock>
+    <Run>Sub</Run><Run>total</Run>
+</TextBlock>
+<TextBlock>
+    <Run>Sub</Run>
+    <Run>total</Run>
+</TextBlock>
+</Root>
+```
 
 ### Configuration Overrides ###
 Overrides allows you to specify different configuration options based on glob patterns. This can be used to format non-standard extensions, or to change options based on file path. Top level options will apply to `**/*.{cs,csx}`

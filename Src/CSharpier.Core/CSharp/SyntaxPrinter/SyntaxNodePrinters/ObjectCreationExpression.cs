@@ -5,7 +5,7 @@ namespace CSharpier.Core.CSharp.SyntaxPrinter.SyntaxNodePrinters;
 
 internal static class ObjectCreationExpression
 {
-    public static Doc Print(ObjectCreationExpressionSyntax node, PrintingContext context)
+    public static Doc Print(ObjectCreationExpressionSyntax node, CSharpPrintingContext context)
     {
         return BreakParentIfNested(
             node,
@@ -22,9 +22,7 @@ internal static class ObjectCreationExpression
                         )
                     )
                     : Doc.Null,
-                node.Initializer != null
-                    ? Doc.Concat(Doc.Line, InitializerExpression.Print(node.Initializer, context))
-                    : Doc.Null
+                InitializerExpression.PrintOptionalWithLine(node.Initializer, context)
             )
         );
     }

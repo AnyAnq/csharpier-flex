@@ -7,7 +7,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace CSharpier.Core.CSharp.SyntaxPrinter.SyntaxNodePrinters;
 
-internal record PrintedNode(CSharpSyntaxNode Node, Doc Doc);
+internal readonly record struct PrintedNode(CSharpSyntaxNode Node, Doc Doc);
 
 // This is based on prettier/src/language-js/print/member-chain.js
 // various discussions/prs about how to potentially improve the formatting
@@ -18,12 +18,12 @@ internal record PrintedNode(CSharpSyntaxNode Node, Doc Doc);
 // https://github.com/prettier/prettier/pull/7889
 internal static class InvocationExpression
 {
-    public static Doc Print(InvocationExpressionSyntax node, PrintingContext context)
+    public static Doc Print(InvocationExpressionSyntax node, CSharpPrintingContext context)
     {
         return PrintMemberChain(node, context);
     }
 
-    public static Doc PrintMemberChain(ExpressionSyntax node, PrintingContext context)
+    public static Doc PrintMemberChain(ExpressionSyntax node, CSharpPrintingContext context)
     {
         var parent = node.Parent;
         var printedNodes = new List<PrintedNode>();
@@ -118,7 +118,7 @@ internal static class InvocationExpression
                 }
             || (
                 parent is ExpressionStatementSyntax expressionStatementSyntax
-                && expressionStatementSyntax.SemicolonToken.LeadingTrivia.Any(o => o.IsComment())
+                && expressionStatementSyntax.SemicolonToken.LeadingTrivia.AnyComment()
             )
             || groups.Count == 1
             ? expanded
@@ -128,7 +128,7 @@ internal static class InvocationExpression
     private static void FlattenAndPrintNodes(
         ExpressionSyntax expression,
         List<PrintedNode> printedNodes,
-        PrintingContext context
+        CSharpPrintingContext context
     )
     {
         /*
@@ -354,7 +354,6 @@ internal static class InvocationExpression
         return groups;
     }
 
-    [SuppressMessage("ReSharper", "ForeachCanBePartlyConvertedToQueryUsingAnotherGetEnumerator")]
     private static Doc[] SelectManyDocsToArray(List<List<PrintedNode>> groups)
     {
         var arrayLength = 0;
@@ -385,9 +384,9 @@ internal static class InvocationExpression
             return Doc.Null;
         }
 
-        var result = new DocListBuilder(groups.Count * 2);
+        using var result = new DocListBuilder(groups.Count * 2);
 
-        for (int index = 0; index < groups.Count; index++)
+        for (var index = 0; index < groups.Count; index++)
         {
             Doc GetPossibleContents()
             {
@@ -478,7 +477,7 @@ internal static class InvocationExpression
                     or ArgumentSyntax
                     or BinaryExpressionSyntax
                     or ExpressionStatementSyntax
-            || groups[1].Skip(1).First().Node
+            || groups[1][1].Node
                 is InvocationExpressionSyntax
                     or ElementAccessExpressionSyntax
                     or PostfixUnaryExpressionSyntax

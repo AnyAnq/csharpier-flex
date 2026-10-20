@@ -9,7 +9,7 @@ namespace CSharpier.Core.CSharp.SyntaxPrinter.SyntaxNodePrinters;
 // this is loosely based on prettier/src/language-js/print/binaryish.js
 internal static class BinaryExpression
 {
-    public static Doc Print(BinaryExpressionSyntax node, PrintingContext context)
+    public static Doc Print(BinaryExpressionSyntax node, CSharpPrintingContext context)
     {
         var docs = PrintBinaryExpression(node, context);
 
@@ -54,7 +54,7 @@ internal static class BinaryExpression
         && three != four
         && five != six
      */
-    private static List<Doc> PrintBinaryExpression(SyntaxNode node, PrintingContext context)
+    private static List<Doc> PrintBinaryExpression(SyntaxNode node, CSharpPrintingContext context)
     {
         if (node is not BinaryExpressionSyntax binaryExpressionSyntax)
         {
@@ -88,8 +88,7 @@ internal static class BinaryExpression
             var binaryOnTheRight = binaryExpressionSyntax.Kind() == SyntaxKind.CoalesceExpression;
             if (binaryOnTheRight)
             {
-                var isResharper =
-                    context.Options.FormattingStyle == FormattingStyle.Resharper;
+                var isResharper = context.FormattingStyle == FormattingStyle.Resharper;
                 docs.Add(
                     Node.Print(binaryExpressionSyntax.Left, context),
                     isResharper ? " " : Doc.Line,
@@ -127,8 +126,7 @@ internal static class BinaryExpression
                 return shouldGroup ? [docs[0], Doc.Group(docs.Skip(1).ToList())] : docs;
             }
 
-            var isResharperStyle =
-                context.Options.FormattingStyle == FormattingStyle.Resharper;
+            var isResharperStyle = context.FormattingStyle == FormattingStyle.Resharper;
             var right = isResharperStyle
                 ? Doc.Concat(
                     " ",
@@ -216,15 +214,13 @@ internal static class BinaryExpression
 
         static bool HasInvocationExcludingLeftmostParenthesized(ExpressionSyntax expression)
         {
-            var leftmost = GetLeftmostExpression(expression);
+            var excludedNode = GetLeftmostExpression(expression) as ParenthesizedExpressionSyntax;
+
             return expression
-                .DescendantNodesAndSelf()
-                .Where(node =>
-                    leftmost is not ParenthesizedExpressionSyntax excludedNode
-                    || !IsDescendantOrSelf(node, excludedNode)
-                )
+                .DescendantNodesAndSelf(o => o != excludedNode)
                 .Any(node =>
-                    node is InvocationExpressionSyntax or ConditionalAccessExpressionSyntax
+                    node != excludedNode
+                    && node is InvocationExpressionSyntax or ConditionalAccessExpressionSyntax
                 );
         }
 
@@ -244,11 +240,6 @@ internal static class BinaryExpression
                 AwaitExpressionSyntax awaitExpr => GetLeftmostExpression(awaitExpr.Expression),
                 _ => expression,
             };
-        }
-
-        static bool IsDescendantOrSelf(SyntaxNode node, SyntaxNode ancestor)
-        {
-            return node == ancestor || node.Ancestors().Contains(ancestor);
         }
     }
 

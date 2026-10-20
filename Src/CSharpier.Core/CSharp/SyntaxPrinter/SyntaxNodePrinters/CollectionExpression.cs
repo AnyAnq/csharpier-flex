@@ -5,7 +5,7 @@ namespace CSharpier.Core.CSharp.SyntaxPrinter.SyntaxNodePrinters;
 
 internal static class CollectionExpression
 {
-    public static Doc Print(CollectionExpressionSyntax node, PrintingContext context)
+    public static Doc Print(CollectionExpressionSyntax node, CSharpPrintingContext context)
     {
         Doc separator = node.Parent
             is ArgumentSyntax { NameColon: null }
@@ -53,7 +53,7 @@ internal static class CollectionExpression
                     ? Doc.HardLine
                     : Doc.IfBreak(Doc.Line, Doc.Null)
                 : Doc.Null,
-            node.CloseBracketToken.LeadingTrivia.Any(o => o.IsComment() || o.IsDirective)
+            node.CloseBracketToken.LeadingTrivia.AnyCommentOrDirective()
                 ? Doc.Concat(
                     Doc.Indent(Token.PrintLeadingTrivia(node.CloseBracketToken, context)),
                     Doc.HardLine

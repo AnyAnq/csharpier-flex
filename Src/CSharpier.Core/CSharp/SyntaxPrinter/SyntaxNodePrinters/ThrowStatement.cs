@@ -5,12 +5,12 @@ namespace CSharpier.Core.CSharp.SyntaxPrinter.SyntaxNodePrinters;
 
 internal static class ThrowStatement
 {
-    public static Doc Print(ThrowStatementSyntax node, PrintingContext context)
+    public static Doc Print(ThrowStatementSyntax node, CSharpPrintingContext context)
     {
         var expression =
             node.Expression != null
                 ? Doc.Concat(" ", Node.Print(node.Expression, context))
-                : string.Empty;
+                : Doc.Null;
         return Doc.Concat(
             ExtraNewLines.Print(node),
             Token.Print(node.ThrowKeyword, context),

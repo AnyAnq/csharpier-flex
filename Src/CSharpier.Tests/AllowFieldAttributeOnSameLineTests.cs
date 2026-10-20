@@ -59,7 +59,9 @@ internal sealed class AllowFieldAttributeOnSameLineTests
             WrapInClass(code),
             CreateOptions(allowFieldAttributeOnSameLine: true)
         );
-        result.Code.Should().Contain("[SerializeField] [HideInInspector] private Button _buttonQuit;");
+        result
+            .Code.Should()
+            .Contain("[SerializeField] [HideInInspector] private Button _buttonQuit;");
     }
 
     [Test]
@@ -70,18 +72,25 @@ internal sealed class AllowFieldAttributeOnSameLineTests
             WrapInClass(code),
             CreateOptions(allowFieldAttributeOnSameLine: true)
         );
-        result.Code.Should().Contain("[Header(\"Title\")]\n    [SerializeField] private Button _buttonQuit;");
+        result
+            .Code.Should()
+            .Contain("[Header(\"Title\")]\n    [SerializeField] private Button _buttonQuit;");
     }
 
     [Test]
     public async Task Field_With_Three_Attributes_Groups_Attrs_Then_Breaks_Field_When_Enabled()
     {
-        var code = "[SerializeField] [HideInInspector] [Header(\"Title\")] private Text _labelTitle;\n";
+        var code =
+            "[SerializeField] [HideInInspector] [Header(\"Title\")] private Text _labelTitle;\n";
         var result = await CSharpFormatter.FormatAsync(
             WrapInClass(code),
             CreateOptions(allowFieldAttributeOnSameLine: true)
         );
-        result.Code.Should().Contain("[SerializeField] [HideInInspector] [Header(\"Title\")]\n    private Text _labelTitle;");
+        result
+            .Code.Should()
+            .Contain(
+                "[SerializeField] [HideInInspector] [Header(\"Title\")]\n    private Text _labelTitle;"
+            );
     }
 
     [Test]
@@ -93,7 +102,11 @@ internal sealed class AllowFieldAttributeOnSameLineTests
             WrapInClass(code),
             CreateOptions(allowFieldAttributeOnSameLine: true)
         );
-        result.Code.Should().Contain("[SerializeField]\n    [HideInInspector]\n    [Header(\"Title\")]\n    [Tooltip(\"tip\")]\n    private Text _labelTitle;");
+        result
+            .Code.Should()
+            .Contain(
+                "[SerializeField]\n    [HideInInspector]\n    [Header(\"Title\")]\n    [Tooltip(\"tip\")]\n    private Text _labelTitle;"
+            );
     }
 
     [Test]

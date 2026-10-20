@@ -6,19 +6,23 @@ namespace CSharpier.Core.CSharp.SyntaxPrinter.SyntaxNodePrinters;
 
 internal static class RecursivePattern
 {
-    public static Doc PrintWithOutType(RecursivePatternSyntax node, PrintingContext context)
+    public static Doc PrintWithOutType(RecursivePatternSyntax node, CSharpPrintingContext context)
     {
         return Print(node, false, context);
     }
 
-    public static Doc Print(RecursivePatternSyntax node, PrintingContext context)
+    public static Doc Print(RecursivePatternSyntax node, CSharpPrintingContext context)
     {
         return Print(node, true, context);
     }
 
-    private static Doc Print(RecursivePatternSyntax node, bool includeType, PrintingContext context)
+    private static Doc Print(
+        RecursivePatternSyntax node,
+        bool includeType,
+        CSharpPrintingContext context
+    )
     {
-        var result = new DocListBuilder(8);
+        using var result = new DocListBuilder(8);
         if (node.Type != null && includeType)
         {
             result.Add(Node.Print(node.Type, context));
@@ -43,7 +47,7 @@ internal static class RecursivePattern
                         Doc.SoftLine,
                         SeparatedSyntaxList.Print(
                             node.PositionalPatternClause.Subpatterns,
-                            (subpatternNode, _) =>
+                            static (subpatternNode, context) =>
                                 Doc.Concat(
                                     subpatternNode.NameColon != null
                                         ? BaseExpressionColon.Print(
@@ -68,9 +72,7 @@ internal static class RecursivePattern
             result.Add(
                 Doc.Group(
                     node.Type != null
-                    && !node.PropertyPatternClause.OpenBraceToken.LeadingTrivia.Any(o =>
-                        o.IsDirective || o.IsComment()
-                    )
+                    && !node.PropertyPatternClause.OpenBraceToken.LeadingTrivia.AnyCommentOrDirective()
                         ? Doc.Line
                         : Doc.Null,
                     Token.Print(node.PropertyPatternClause.OpenBraceToken, context),
@@ -78,7 +80,7 @@ internal static class RecursivePattern
                         node.PropertyPatternClause.Subpatterns.Any() ? Doc.Line : Doc.Null,
                         SeparatedSyntaxList.Print(
                             node.PropertyPatternClause.Subpatterns,
-                            (subpatternNode, _) =>
+                            static (subpatternNode, context) =>
                                 Doc.Group(
                                     subpatternNode.ExpressionColon != null
                                         ? Node.Print(subpatternNode.ExpressionColon, context)
@@ -100,6 +102,6 @@ internal static class RecursivePattern
             result.Add(" ", Node.Print(node.Designation, context));
         }
 
-        return Doc.Concat(ref result);
+        return Doc.Concat(result);
     }
 }

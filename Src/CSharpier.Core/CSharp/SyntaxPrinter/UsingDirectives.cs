@@ -1,5 +1,6 @@
 using CSharpier.Core.CSharp.SyntaxPrinter.SyntaxNodePrinters;
 using CSharpier.Core.DocTypes;
+using CSharpier.Core.Utilities;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -12,7 +13,7 @@ internal static class UsingDirectives
 
     public static Doc PrintWithSorting(
         SyntaxList<UsingDirectiveSyntax> usings,
-        PrintingContext context,
+        CSharpPrintingContext context,
         bool printExtraLines
     )
     {
@@ -68,6 +69,11 @@ internal static class UsingDirectives
             }
         }
 
+        if (Token.HasLeadingCommentMatching(usings[0], CSharpierIgnore.IgnoreStartRegex))
+        {
+            initialComments.Clear();
+        }
+
         docs.Add(Token.PrintLeadingTrivia([.. initialComments], context));
         if (keepUsingsUntilEndIf)
         {
@@ -94,6 +100,7 @@ internal static class UsingDirectives
         }
 
         var isFirst = true;
+        var prevShouldFormat = true;
         var index = 0;
         var reorderedDirectives = false;
         foreach (var groupOfUsingData in GroupUsings(usingList, [.. triviaWithinIf], context))
@@ -102,10 +109,15 @@ internal static class UsingDirectives
             {
                 if (!isFirst)
                 {
-                    docs.Add(Doc.HardLine);
+                    if (usingData.ShouldFormat || prevShouldFormat)
+                    {
+                        docs.Add(Doc.HardLine);
+                    }
                 }
 
-                if (usingData.LeadingTrivia != Doc.Null)
+                prevShouldFormat = usingData.ShouldFormat;
+
+                if (usingData.LeadingTrivia != Doc.Null && usingData.ShouldFormat)
                 {
                     docs.Add(usingData.LeadingTrivia);
                 }
@@ -117,7 +129,11 @@ internal static class UsingDirectives
                     }
 
                     index++;
-                    docs.Add(UsingDirective.Print(usingData.Using, context, printExtraLines));
+                    docs.Add(
+                        usingData.ShouldFormat
+                            ? UsingDirective.Print(usingData.Using, context, printExtraLines)
+                            : CSharpierIgnore.PrintWithoutFormatting(usingData.Using, context)
+                    );
                 }
 
                 isFirst = false;
@@ -144,7 +160,7 @@ internal static class UsingDirectives
     private static IEnumerable<List<UsingData>> GroupUsings(
         List<UsingDirectiveSyntax> usings,
         SyntaxTriviaList triviaOnFirstUsing,
-        PrintingContext context
+        CSharpPrintingContext context
     )
     {
         var globalSystemUsings = new List<UsingData>();
@@ -159,10 +175,23 @@ internal static class UsingDirectives
         var directiveGroup = new List<UsingData>();
         var ifCount = 0;
         var isFirst = true;
+        var shouldFormat = true;
 
         foreach (var usingDirective in usings)
         {
-            var openIf = ifCount > 0;
+            var openIfOrIgnore = ifCount > 0;
+            if (Token.HasLeadingCommentMatching(usingDirective, CSharpierIgnore.IgnoreEndRegex))
+            {
+                openIfOrIgnore = true;
+                shouldFormat = true;
+            }
+            else if (
+                Token.HasLeadingCommentMatching(usingDirective, CSharpierIgnore.IgnoreStartRegex)
+            )
+            {
+                shouldFormat = false;
+            }
+
             foreach (var directive in usingDirective.GetLeadingTrivia().Where(o => o.IsDirective))
             {
                 if (directive.RawSyntaxKind() is SyntaxKind.IfDirectiveTrivia)
@@ -182,25 +211,35 @@ internal static class UsingDirectives
                     {
                         Using = usingDirective,
                         LeadingTrivia = PrintLeadingTrivia(usingDirective),
+                        ShouldFormat = shouldFormat,
                     }
                 );
             }
             else
             {
-                if (openIf)
+                if (openIfOrIgnore)
                 {
                     directiveGroup.Add(
-                        new UsingData { LeadingTrivia = PrintLeadingTrivia(usingDirective) }
+                        new UsingData
+                        {
+                            LeadingTrivia = PrintLeadingTrivia(usingDirective),
+                            ShouldFormat = shouldFormat,
+                        }
                     );
                 }
 
                 var usingData = new UsingData
                 {
                     Using = usingDirective,
-                    LeadingTrivia = !openIf ? PrintLeadingTrivia(usingDirective) : Doc.Null,
+                    LeadingTrivia = !openIfOrIgnore ? PrintLeadingTrivia(usingDirective) : Doc.Null,
+                    ShouldFormat = shouldFormat,
                 };
 
-                if (usingDirective.GlobalKeyword.RawSyntaxKind() != SyntaxKind.None)
+                if (!shouldFormat)
+                {
+                    directiveGroup.Add(usingData);
+                }
+                else if (usingDirective.GlobalKeyword.RawSyntaxKind() != SyntaxKind.None)
                 {
                     if (usingDirective.Alias is not null)
                     {
@@ -274,6 +313,7 @@ internal static class UsingDirectives
     {
         public Doc LeadingTrivia { get; init; } = Doc.Null;
         public UsingDirectiveSyntax? Using { get; init; }
+        public required bool ShouldFormat { get; init; } = true;
     }
 
     private static bool IsSystemName(NameSyntax value)

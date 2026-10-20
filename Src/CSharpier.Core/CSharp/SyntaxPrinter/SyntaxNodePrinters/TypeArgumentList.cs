@@ -1,11 +1,12 @@
 using CSharpier.Core.DocTypes;
+using CSharpier.Core.Utilities;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace CSharpier.Core.CSharp.SyntaxPrinter.SyntaxNodePrinters;
 
 internal static class TypeArgumentList
 {
-    public static Doc Print(TypeArgumentListSyntax node, PrintingContext context)
+    public static Doc Print(TypeArgumentListSyntax node, CSharpPrintingContext context)
     {
         Doc separator =
             node.Arguments.FirstOrDefault() is not OmittedTypeArgumentSyntax

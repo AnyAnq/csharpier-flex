@@ -1,4 +1,5 @@
 using CSharpier.Core.DocTypes;
+using CSharpier.Core.Utilities;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
@@ -6,9 +7,7 @@ namespace CSharpier.Core.CSharp.SyntaxPrinter.SyntaxNodePrinters;
 
 internal static class InterpolatedStringExpression
 {
-    internal static readonly string[] lineSeparators = ["\r\n", "\r", "\n"];
-
-    public static Doc Print(InterpolatedStringExpressionSyntax node, PrintingContext context)
+    public static Doc Print(InterpolatedStringExpressionSyntax node, CSharpPrintingContext context)
     {
         // if any of the expressions in the interpolation contain a newline then don't force this flat
         // ideally we would format the expressions in some way, but determining how much to indent is a hard problem
@@ -45,7 +44,10 @@ internal static class InterpolatedStringExpression
         );
     }
 
-    private static Doc RawString(InterpolatedStringExpressionSyntax node, PrintingContext context)
+    private static Doc RawString(
+        InterpolatedStringExpressionSyntax node,
+        CSharpPrintingContext context
+    )
     {
         var endDelimiterIsIndented =
             node.StringEndToken.Text.Replace("\r", string.Empty).Replace("\n", string.Empty)[0]
@@ -71,7 +73,7 @@ internal static class InterpolatedStringExpression
                 }
 
                 var lines = textSyntax.TextToken.ValueText.Split(
-                    lineSeparators,
+                    Token.lineSeparators,
                     StringSplitOptions.None
                 );
                 for (var index = 0; index < lines.Length; index++)
@@ -102,13 +104,8 @@ internal static class InterpolatedStringExpression
         );
         contents.Add(Token.Print(node.StringEndToken, context));
 
-        var argument = node.FindParent<ArgumentSyntax>();
-
         return Doc.IndentIf(
-            argument is null
-                || argument.Expression
-                    is ParenthesizedLambdaExpressionSyntax
-                        or SimpleLambdaExpressionSyntax,
+            Token.ShouldIndentRawString(node.FindParent<ArgumentSyntax>()),
             Doc.Concat(contents)
         );
     }

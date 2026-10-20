@@ -6,12 +6,12 @@ namespace CSharpier.Core.CSharp.SyntaxPrinter.SyntaxNodePrinters;
 
 internal static class GotoStatement
 {
-    public static Doc Print(GotoStatementSyntax node, PrintingContext context)
+    public static Doc Print(GotoStatementSyntax node, CSharpPrintingContext context)
     {
         var expression =
             node.Expression != null
                 ? Doc.Concat(" ", Node.Print(node.Expression, context))
-                : string.Empty;
+                : Doc.Null;
         return Doc.Concat(
             ExtraNewLines.Print(node),
             Token.Print(node.GotoKeyword, context),

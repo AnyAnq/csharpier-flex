@@ -5,9 +5,9 @@ namespace CSharpier.Core.CSharp.SyntaxPrinter.SyntaxNodePrinters;
 
 internal static class WhileStatement
 {
-    public static Doc Print(WhileStatementSyntax node, PrintingContext context)
+    public static Doc Print(WhileStatementSyntax node, CSharpPrintingContext context)
     {
-        var isResharper = context.Options.FormattingStyle == FormattingStyle.Resharper;
+        var isResharper = context.FormattingStyle == FormattingStyle.Resharper;
         var result = Doc.Concat(
             ExtraNewLines.Print(node),
             Doc.Group(
@@ -22,14 +22,9 @@ internal static class WhileStatement
                     ),
                 Token.Print(node.CloseParenToken, context)
             ),
-            node.Statement switch
-            {
-                WhileStatementSyntax => Doc.Group(
-                    Doc.HardLine,
-                    Node.Print(node.Statement, context)
-                ),
-                _ => OptionalBraces.Print(node.Statement, context),
-            }
+            node.Statement is WhileStatementSyntax whileStatementSyntax
+                ? Doc.Group(Doc.HardLine, Print(whileStatementSyntax, context))
+                : OptionalBraces.Print(node.Statement, context)
         );
 
         return result;

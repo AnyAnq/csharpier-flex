@@ -1,7 +1,6 @@
 using System.IO;
 using System.Threading.Tasks;
 using System.Xml;
-using CSharpier.Core.CSharp.SyntaxPrinter;
 using CSharpier.Core.DocTypes;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Text;
@@ -34,16 +33,10 @@ public static class XmlFormatter
                 lineEnding,
                 printerOptions.XmlWhitespaceSensitivity
             );
-            var printingContext = new PrintingContext
+            var printingContext = new XmlPrintingContext
             {
                 NormalizedXml = normalizedXml,
-                Options = new PrintingContext.PrintingContextOptions
-                {
-                    LineEnding = lineEnding,
-                    IndentSize = printerOptions.IndentSize,
-                    UseTabs = printerOptions.UseTabs,
-                    XmlWhitespaceSensitivity = printerOptions.XmlWhitespaceSensitivity,
-                },
+                LineEnding = lineEnding,
             };
             var doc = Node.Print(rootNode, printingContext);
             var formattedXml = DocPrinter.DocPrinter.Print(doc, printerOptions, lineEnding);
@@ -56,7 +49,9 @@ public static class XmlFormatter
                 DocTree = printerOptions.IncludeDocTree
                     ? DocSerializer.Serialize(doc)
                     : string.Empty,
-                AST = RawNodeSyntaxWriter.Write(rootNode),
+                AST = printerOptions.IncludeAST
+                    ? RawNodeSyntaxWriter.Write(rootNode)
+                    : string.Empty,
             };
         }
         catch (XmlException ex)

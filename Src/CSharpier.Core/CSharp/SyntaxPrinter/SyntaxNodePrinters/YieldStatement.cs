@@ -5,12 +5,12 @@ namespace CSharpier.Core.CSharp.SyntaxPrinter.SyntaxNodePrinters;
 
 internal static class YieldStatement
 {
-    public static Doc Print(YieldStatementSyntax node, PrintingContext context)
+    public static Doc Print(YieldStatementSyntax node, CSharpPrintingContext context)
     {
-        Doc expression =
+        var expression =
             node.Expression != null
                 ? Doc.Concat(" ", Node.Print(node.Expression, context))
-                : string.Empty;
+                : Doc.Null;
         return Doc.Concat(
             ExtraNewLines.Print(node),
             Token.PrintWithSuffix(node.YieldKeyword, " ", context),

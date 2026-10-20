@@ -12,13 +12,17 @@ internal static class NamespaceLikePrinter
     public static void Print(
         BaseNamespaceDeclarationSyntax node,
         List<Doc> docs,
-        PrintingContext context
+        CSharpPrintingContext context
     )
     {
         Print(node, node.Externs, node.Usings, node.Members, docs, context);
     }
 
-    public static void Print(CompilationUnitSyntax node, List<Doc> docs, PrintingContext context)
+    public static void Print(
+        CompilationUnitSyntax node,
+        List<Doc> docs,
+        CSharpPrintingContext context
+    )
     {
         Print(node, node.Externs, node.Usings, node.Members, docs, context);
     }
@@ -29,7 +33,7 @@ internal static class NamespaceLikePrinter
         SyntaxList<UsingDirectiveSyntax> usings,
         SyntaxList<MemberDeclarationSyntax> members,
         List<Doc> docs,
-        PrintingContext context
+        CSharpPrintingContext context
     )
     {
         if (externs.Count > 0)
@@ -66,10 +70,7 @@ internal static class NamespaceLikePrinter
             if (externs.Any() || usings.Any())
             {
                 docs.Add(
-                    compilationUnitSyntax
-                        .AttributeLists[0]
-                        .GetLeadingTrivia()
-                        .Any(o => o.IsDirective)
+                    compilationUnitSyntax.AttributeLists[0].GetLeadingTrivia().AnyDirective()
                         ? ExtraNewLines.Print(compilationUnitSyntax.AttributeLists[0])
                         : Doc.HardLine
                 );
